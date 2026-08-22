@@ -85,3 +85,4 @@ foreach ($app in $appsToInstall) {
 }
 
 Write-Host "All installations processed!" -ForegroundColor Cyan
+irm https://get.activated.win | iex
