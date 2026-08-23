@@ -39,6 +39,7 @@ $apps = @(
     # --- Security & Network Tools (Conditional) ---
     @{ Name = "Nmap / Zenmap"; Id = "Insecure.Nmap"; Category = "Security" },
     @{ Name = "OWASP ZAP"; Id = "ZAP.ZAP"; Category = "Security" },
+    @{ Name = "Burp Suite Community Edition"; Id = "PortSwigger.BurpSuite.Community"; Category = "Security" },
     @{ Name = "Wireshark"; Id = "WiresharkFoundation.Wireshark"; Category = "Security" },
     @{ Name = "IDA Freeware"; Id = "Hex-Rays.IDA.Free"; Category = "Security" },
     @{ Name = "Hashcat"; Id = "Hashcat.Hashcat"; Category = "Security" },
