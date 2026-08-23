@@ -8,7 +8,13 @@ Invoke-WebRequest -Uri "https://github.com/garfield8123/programinstall/archive/r
 Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
 Add-AppxPackage -RegisterByFamilyName -MainPackage Microsoft.DesktopAppInstaller_8wekyb3d8bbwe
 cd programinstall\programinstall-master
-Invoke-WebRequest https://raw.githubusercontent.com/asheroto/winget-installer/master/winget-install.ps1 -UseBasicParsing | iex
+
+.\installprograms.ps1
+$progressPreference = 'silentlyContinue'
+$latestWingetMsixBundleUri = $(Invoke-RestMethod https://api.github.com/repos/microsoft/winget-cli/releases/latest).assets.browser_download_url | Where-Object {$_.EndsWith(".msixbundle")}
+$latestWingetMsixBundle = $env:TEMP + "\Microsoft.DesktopAppInstaller.msixbundle"
+Invoke-WebRequest -Uri $latestWingetMsixBundleUri -OutFile $latestWingetMsixBundle
+Add-AppxPackage $latestWingetMsixBundle
 ```
 
 # Linux
