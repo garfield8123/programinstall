@@ -11,11 +11,9 @@ detect_distro() {
     if [ -f /etc/os-release ]; then
         . /etc/os-release
         DISTRO=$ID
-        LIKE=$ID_LIKE
     else
         DISTRO="unknown"
     fi
-
     echo "[*] Detected Linux distribution: $DISTRO"
 }
 
@@ -32,7 +30,6 @@ initialize_managers() {
             dnf check-update || true
             ;;
         *)
-            # Fallback assumption
             if command -v apt &> /dev/null; then
                 PKG_MANAGER="apt"
             elif command -v dnf &> /dev/null; then
@@ -44,7 +41,7 @@ initialize_managers() {
             ;;
     esac
 
-    # Ensure Flatpak is available for universal software (Kdenlive, Steam, etc.)
+    # Ensure Flatpak is available
     if ! command -v flatpak &> /dev/null; then
         echo "[*] Installing Flatpak..."
         if [ "$PKG_MANAGER" == "apt" ]; then
@@ -58,26 +55,33 @@ initialize_managers() {
 
 # --- Installation Functions ---
 
-install_browsers_and_utils() {
-    echo "[+] Installing Bitwarden, Discord, 7-Zip, Git, Python..."
+install_standard_suite() {
+    echo "[+] Installing Standard Suite (Utils, Dev, Media, VPN)..."
+    
     if [ "$PKG_MANAGER" == "apt" ]; then
+        # Native deb downloads
         curl -L "https://bitwarden.com/download/?app=desktop&platform=linux&variant=deb" --output /tmp/bitwarden.deb
         apt install -y /tmp/bitwarden.deb && rm /tmp/bitwarden.deb
 
         curl -L "https://discord.com/api/download?platform=linux&format=deb" --output /tmp/discord.deb
         apt install -y /tmp/discord.deb && rm /tmp/discord.deb
 
-        apt install -y curl wget git python3 python3-pip python3-venv 7zip
+        # Core utils & Dev tools
+        apt install -y curl wget git git-lfs python3 python3-pip python3-venv 7zip docker.io docker-compose-v2
+        
     elif [ "$PKG_MANAGER" == "dnf" ]; then
-        # Install via Flatpak or RPM equivalents where .deb isn't native
         flatpak install -y flathub com.bitwarden.desktop
         flatpak install -y flathub com.discordapp.Discord
-        dnf install -y curl wget git python3 python3-pip p7zip p7zip-plugins
+        dnf install -y curl wget git git-lfs python3 python3-pip p7zip p7zip-plugins docker docker-compose
     fi
-}
 
-install_media_engineering() {
-    echo "[+] Installing Kdenlive, FreeCAD, KiCad, Blender, GIMP, OBS via Flatpak..."
+    systemctl enable --now docker
+
+    # Flatpak Applications (Media, Browsers, VPN, Dev)
+    echo "[+] Installing Flatpak applications..."
+    flatpak install -y flathub com.visualstudio.code
+    flatpak install -y flathub com.protonvpn.www
+    flatpak install -y flathub org.openvpn.OpenVPN
     flatpak install -y flathub org.kde.kdenlive
     flatpak install -y flathub org.freecad.FreeCAD
     flatpak install -y flathub org.kicad.KiCad
@@ -87,21 +91,8 @@ install_media_engineering() {
     flatpak install -y flathub com.valvesoftware.Steam
 }
 
-install_dev_tools() {
-    echo "[+] Installing Docker and VS Code..."
-    if [ "$PKG_MANAGER" == "apt" ]; then
-        apt install -y docker.io docker-compose-v2
-    elif [ "$PKG_MANAGER" == "dnf" ]; then
-        dnf install -y docker docker-compose
-    }
-    systemctl enable --now docker
-
-    # Install VS Code via Microsoft repositories or flatpak
-    flatpak install -y flathub com.visualstudio.code
-}
-
 install_security_tools() {
-    echo "[+] Installing Security and Reversing Tools (Ghidra, Radare2, Nmap, Wireshark)..."
+    echo "[+] Installing Security and Reversing Suite..."
     if [ "$PKG_MANAGER" == "apt" ]; then
         apt install -y ghidra radare2 nmap wireshark exploitdb clamav
     elif [ "$PKG_MANAGER" == "dnf" ]; then
@@ -115,25 +106,21 @@ initialize_managers
 
 echo "--------------------------------------------------"
 echo "Select Installation Option:"
-echo "1) Install Standard Suite (Browsers, Dev, Media, Engineering)"
-echo "2) Install Security & Reversing Suite (Ghidra, Radare2, ExploitDB, Nmap)"
+echo "1) Install Standard Suite (Browsers, Dev, Media, VPN, Docker)"
+echo "2) Install Security & Reversing Suite (Ghidra, Radare2, Nmap)"
 echo "3) Install EVERYTHING (Standard + Security)"
 echo "--------------------------------------------------"
 read -p "Enter choice [1-3]: " choice
 
 case $choice in
     1)
-        install_browsers_and_utils
-        install_media_engineering
-        install_dev_tools
+        install_standard_suite
         ;;
     2)
         install_security_tools
         ;;
     3)
-        install_browsers_and_utils
-        install_media_engineering
-        install_dev_tools
+        install_standard_suite
         install_security_tools
         ;;
     *)
