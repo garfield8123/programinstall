@@ -24,6 +24,7 @@ $apps = @(
     @{ Name = "Android Studio"; Id = "Google.AndroidStudio"; Category = "Standard" },
     @{ Name = "Sysinternals Suite"; Id = "Microsoft.Sysinternals.Suite"; Category = "Standard" },
     @{ Name = "7-Zip"; Id = "7zip.7zip"; Category = "Standard" },
+    @{ Name = "Proton VPN"; Id = "Proton.ProtonVPN"; Category = "Standard" },
     
     # --- Browsers & Password Management ---
     @{ Name = "Bitwarden"; Id = "Bitwarden.Bitwarden"; Category = "Standard" },
