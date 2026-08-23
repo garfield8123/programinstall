@@ -31,7 +31,7 @@ $apps = @(
     @{ Name = "Bitwarden"; Id = "Bitwarden.Bitwarden"; Category = "Standard" },
     @{ Name = "Google Chrome"; Id = "Google.Chrome"; Category = "Standard" },
     @{ Name = "Mozilla Firefox"; Id = "Mozilla.Firefox"; Category = "Standard" },
-    @{ Name = "Opera Browser"; Id = "Opera.Opera"; Category = "Standard" },
+    @{ Name = "Opera GX"; Id = "Opera.OperaGX"; Category = "Standard" }
     
     # --- Communication & Collaboration ---
     @{ Name = "Discord"; Id = "Discord.Discord"; Category = "Standard" },
