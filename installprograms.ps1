@@ -27,6 +27,8 @@ $apps = @(
     @{ Name = "Proton VPN"; Id = "Proton.ProtonVPN"; Category = "Standard" },
     @{ Name = "OpenVPN"; Id = "OpenVPNTechnologies.OpenVPN"; Category = "Standard" },
     @{ Name = "MobaXterm"; Id = "Mobatek.MobaXterm"; Category = "Standard" },
+    @{ Name = "Tailscale VPN"; Id = "Tailscale.Tailscale"; Category = "Standard" },
+    @{ Name = "GNS3"; Id = "GNS3.GNS3"; Category = "Standard" },
     
     # --- Browsers & Password Management ---
     @{ Name = "Bitwarden"; Id = "Bitwarden.Bitwarden"; Category = "Standard" },
