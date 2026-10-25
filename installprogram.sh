@@ -1,132 +1,326 @@
-#!/bin/bash
 
-# Ensure script is run as root/sudo
-if [ "$EUID" -ne 0 ]; then
-  echo "[-] Please run this script with sudo or as root."
-  exit 1
+#!/usr/bin/env bash
+
+set -uo pipefail
+
+# Cross-distribution Linux App Manager
+# Supports Ubuntu, Debian, Kali, Parrot, Fedora,
+# Rocky Linux, AlmaLinux, and compatible distributions.
+
+if [[ $EUID -ne 0 ]]; then
+    echo "[-] Run with sudo: sudo bash $0"
+    exit 1
 fi
 
-# Detect Linux Distribution Family
-detect_distro() {
-    if [ -f /etc/os-release ]; then
-        . /etc/os-release
-        DISTRO=$ID
+# Load distribution information
+if [[ -r /etc/os-release ]]; then
+    . /etc/os-release
+else
+    echo "[-] Cannot detect Linux distribution."
+    exit 1
+fi
+
+DISTRO="${ID:-unknown}"
+DISTRO_FAMILY="${ID_LIKE:-}"
+
+# Determine package manager
+if command -v apt-get >/dev/null 2>&1; then
+    PKG_MANAGER="apt"
+elif command -v dnf >/dev/null 2>&1; then
+    PKG_MANAGER="dnf"
+else
+    echo "[-] APT or DNF is required."
+    exit 1
+fi
+
+# One editable catalog:
+# Name|Category|APT package|DNF package|Flatpak ID
+APP_CATALOG=(
+    "curl|essential|curl|curl|"
+    "wget|essential|wget|wget|"
+    "Git|essential|git|git|"
+    "Git LFS|essential|git-lfs|git-lfs|"
+    "7-Zip|essential|p7zip-full|p7zip|"
+    "Python 3|development|python3|python3|"
+    "Python pip|development|python3-pip|python3-pip|"
+    "Python venv|development|python3-venv|python3|"
+    "VS Code|development|||com.visualstudio.code"
+    "Docker Engine|containers|docker.io|moby-engine|"
+    "Docker Compose|containers|docker-compose-v2|docker-compose|"
+    "Bitwarden|communication|||com.bitwarden.desktop"
+    "Discord|communication|||com.discordapp.Discord"
+    "Proton VPN|vpn|||com.protonvpn.www"
+    "OpenVPN|vpn|openvpn|openvpn|"
+    "Ghidra|security|ghidra|ghidra|"
+    "Radare2|security|radare2|radare2|"
+    "Nmap|security|nmap|nmap|"
+    "Wireshark|security|wireshark|wireshark|"
+    "ClamAV|security|clamav|clamav|"
+    "Exploit Database|security|exploitdb|exploitdb|"
+    "Kdenlive|media|||org.kde.kdenlive"
+    "FreeCAD|media|||org.freecad.FreeCAD"
+    "KiCad|media|||org.kicad.KiCad"
+    "Blender|media|||org.blender.Blender"
+    "GIMP|media|||org.gimp.GIMP"
+    "OBS Studio|media|||com.obsproject.Studio"
+    "Steam|gaming|||com.valvesoftware.Steam"
+)
+
+OK_COUNT=0
+FAIL_COUNT=0
+SKIP_COUNT=0
+
+log()  { echo "[*] $*"; }
+good() { echo "[+] $*"; }
+warn() { echo "[!] $*"; }
+
+# Initialize the package environment
+initialize_managers() {
+    log "Distribution: $PRETTY_NAME"
+    log "Package manager: $PKG_MANAGER"
+
+    if [[ "$PKG_MANAGER" == "apt" ]]; then
+        apt-get update
     else
-        DISTRO="unknown"
+        dnf makecache
     fi
-    echo "[*] Detected Linux distribution: $DISTRO"
+
+    if ! command -v flatpak >/dev/null 2>&1; then
+        log "Installing Flatpak..."
+        if [[ "$PKG_MANAGER" == "apt" ]]; then
+            apt-get install -y flatpak || return 1
+        else
+            dnf install -y flatpak || return 1
+        fi
+    fi
+
+    flatpak remote-add --if-not-exists flathub \
+        https://dl.flathub.org/repo/flathub.flatpakrepo || return 1
+
+    good "Package environment initialized."
 }
 
-# Setup package managers / Flatpak universally
-initialize_managers() {
-    echo "[*] Setting up package environment..."
-    case "$DISTRO" in
-        ubuntu|debian|pop|linuxmint|kali)
-            PKG_MANAGER="apt"
-            apt update -y
+# Read a catalog row and install the application
+install_app() {
+    local name="$1"
+    local category="$2"
+    local apt_pkg="$3"
+    local dnf_pkg="$4"
+    local flatpak_id="$5"
+
+    echo
+    log "Installing $name..."
+
+    if [[ -n "$flatpak_id" ]]; then
+        if flatpak install --system -y flathub "$flatpak_id"; then
+            good "$name installed."
+            ((OK_COUNT+=1))
+        else
+            warn "Could not install $name."
+            ((FAIL_COUNT+=1))
+        fi
+        return
+    fi
+
+    local package=""
+    if [[ "$PKG_MANAGER" == "apt" ]]; then
+        package="$apt_pkg"
+    else
+        package="$dnf_pkg"
+    fi
+
+    if [[ -z "$package" ]]; then
+        warn "No native package mapping for $name."
+        ((SKIP_COUNT+=1))
+        return
+    fi
+
+    local rc=0
+    if [[ "$PKG_MANAGER" == "apt" ]]; then
+        apt-get install -y "$package" || rc=$?
+    else
+        dnf install -y "$package" || rc=$?
+    fi
+
+    if (( rc == 0 )); then
+        good "$name installed."
+        ((OK_COUNT+=1))
+    else
+        warn "$name unavailable or installation failed."
+        ((FAIL_COUNT+=1))
+    fi
+}
+
+# Install every application in a category
+install_category() {
+    local selected_category="$1"
+    local entry name category apt_pkg dnf_pkg flatpak_id
+
+    for entry in "${APP_CATALOG[@]}"; do
+        IFS='|' read -r name category apt_pkg dnf_pkg flatpak_id \
+            <<< "$entry"
+
+        if [[ "$selected_category" == "all" ||
+              "$category" == "$selected_category" ]]; then
+            install_app "$name" "$category" \
+                "$apt_pkg" "$dnf_pkg" "$flatpak_id"
+        fi
+    done
+}
+
+# Show the complete editable application catalog
+list_apps() {
+    local i entry name category apt_pkg dnf_pkg flatpak_id
+
+    echo
+    echo "Available applications:"
+    echo "---------------------------------------------"
+
+    for i in "${!APP_CATALOG[@]}"; do
+        IFS='|' read -r name category apt_pkg dnf_pkg flatpak_id \
+            <<< "${APP_CATALOG[$i]}"
+        printf "%2d) %-22s [%s]\n" "$((i+1))" "$name" "$category"
+    done
+
+    echo "---------------------------------------------"
+}
+
+# Install applications selected by their menu numbers
+install_selected() {
+    local selection item index entry
+    local name category apt_pkg dnf_pkg flatpak_id
+
+    list_apps
+    read -r -p "Enter app numbers (e.g. 1,3,8): " selection
+
+    IFS=',' read -ra choices <<< "$selection"
+
+    for item in "${choices[@]}"; do
+        item="${item//[[:space:]]/}"
+
+        if [[ ! "$item" =~ ^[0-9]+$ ]] ||
+           (( item < 1 || item > ${#APP_CATALOG[@]} )); then
+            warn "Invalid selection: $item"
+            ((SKIP_COUNT+=1))
+            continue
+        fi
+
+        index=$((item-1))
+        entry="${APP_CATALOG[$index]}"
+
+        IFS='|' read -r name category apt_pkg dnf_pkg flatpak_id \
+            <<< "$entry"
+
+        install_app "$name" "$category" \
+            "$apt_pkg" "$dnf_pkg" "$flatpak_id"
+    done
+}
+
+# Upgrade native packages and Flatpak apps
+update_everything() {
+    local rc=0
+
+    echo
+    log "Updating system packages..."
+
+    if [[ "$PKG_MANAGER" == "apt" ]]; then
+        apt-get update && apt-get upgrade -y || rc=$?
+    else
+        dnf upgrade --refresh -y || rc=$?
+    fi
+
+    if (( rc != 0 )); then
+        warn "Native package update encountered an error."
+    else
+        good "Native package update finished."
+    fi
+
+    if command -v flatpak >/dev/null 2>&1; then
+        echo
+        log "Updating Flatpak applications..."
+        if flatpak update --system -y; then
+            good "Flatpak update finished."
+        else
+            warn "Flatpak update encountered an error."
+            rc=1
+        fi
+    fi
+
+    return "$rc"
+}
+
+# Start Docker only if its service exists
+start_docker_if_available() {
+    if command -v systemctl >/dev/null 2>&1 &&
+       systemctl cat docker.service >/dev/null 2>&1; then
+        systemctl enable --now docker.service ||
+            warn "Docker is installed but could not be started."
+    fi
+}
+
+# Main menu
+initialize_managers || {
+    echo "[-] Package environment setup failed."
+    exit 1
+}
+
+while true; do
+    echo
+    echo "============================================="
+    echo "        CROSS-DISTRO LINUX APP MANAGER"
+    echo "============================================="
+    echo "OS: $PRETTY_NAME"
+    echo "Package manager: $PKG_MANAGER"
+    echo
+    echo "1) Install standard suite"
+    echo "2) Install security suite"
+    echo "3) Install all applications"
+    echo "4) Install selected applications"
+    echo "5) Update system and Flatpak applications"
+    echo "6) List application catalog"
+    echo "7) Exit"
+    echo "============================================="
+
+    read -r -p "Select option [1-7]: " choice
+
+    case "$choice" in
+        1)
+            install_category essential
+            install_category development
+            install_category containers
+            install_category communication
+            install_category vpn
+            install_category media
+            install_category gaming
+            start_docker_if_available
             ;;
-        fedora|rhel|centos|rocky|almalinux)
-            PKG_MANAGER="dnf"
-            dnf check-update || true
+        2)
+            install_category security
+            ;;
+        3)
+            install_category all
+            start_docker_if_available
+            ;;
+        4)
+            install_selected
+            start_docker_if_available
+            ;;
+        5)
+            update_everything
+            ;;
+        6)
+            list_apps
+            ;;
+        7)
+            echo "Exiting."
+            break
             ;;
         *)
-            if command -v apt &> /dev/null; then
-                PKG_MANAGER="apt"
-            elif command -v dnf &> /dev/null; then
-                PKG_MANAGER="dnf"
-            else
-                echo "[-] Unsupported package manager. Exiting."
-                exit 1
-            fi
+            warn "Invalid menu option."
             ;;
     esac
 
-    # Ensure Flatpak is available
-    if ! command -v flatpak &> /dev/null; then
-        echo "[*] Installing Flatpak..."
-        if [ "$PKG_MANAGER" == "apt" ]; then
-            apt install flatpak -y
-        elif [ "$PKG_MANAGER" == "dnf" ]; then
-            dnf install flatpak -y
-        fi
-    fi
-    flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-}
-
-# --- Installation Functions ---
-
-install_standard_suite() {
-    echo "[+] Installing Standard Suite (Utils, Dev, Media, VPN)..."
-    
-    if [ "$PKG_MANAGER" == "apt" ]; then
-        # Native deb downloads
-        curl -L "https://bitwarden.com/download/?app=desktop&platform=linux&variant=deb" --output /tmp/bitwarden.deb
-        apt install -y /tmp/bitwarden.deb && rm /tmp/bitwarden.deb
-
-        curl -L "https://discord.com/api/download?platform=linux&format=deb" --output /tmp/discord.deb
-        apt install -y /tmp/discord.deb && rm /tmp/discord.deb
-
-        # Core utils & Dev tools
-        apt install -y curl wget git git-lfs python3 python3-pip python3-venv 7zip docker.io docker-compose-v2
-        
-    elif [ "$PKG_MANAGER" == "dnf" ]; then
-        flatpak install -y flathub com.bitwarden.desktop
-        flatpak install -y flathub com.discordapp.Discord
-        dnf install -y curl wget git git-lfs python3 python3-pip p7zip p7zip-plugins docker docker-compose
-    fi
-
-    systemctl enable --now docker
-
-    # Flatpak Applications (Media, Browsers, VPN, Dev)
-    echo "[+] Installing Flatpak applications..."
-    flatpak install -y flathub com.visualstudio.code
-    flatpak install -y flathub com.protonvpn.www
-    flatpak install -y flathub org.openvpn.OpenVPN
-    flatpak install -y flathub org.kde.kdenlive
-    flatpak install -y flathub org.freecad.FreeCAD
-    flatpak install -y flathub org.kicad.KiCad
-    flatpak install -y flathub org.blender.Blender
-    flatpak install -y flathub org.gimp.GIMP
-    flatpak install -y flathub com.obsproject.Studio
-    flatpak install -y flathub com.valvesoftware.Steam
-}
-
-install_security_tools() {
-    echo "[+] Installing Security and Reversing Suite..."
-    if [ "$PKG_MANAGER" == "apt" ]; then
-        apt install -y ghidra radare2 nmap wireshark exploitdb clamav
-    elif [ "$PKG_MANAGER" == "dnf" ]; then
-        dnf install -y ghidra radare2 nmap wireshark exploitdb clamav
-    fi
-}
-
-# --- Main Execution Flow ---
-detect_distro
-initialize_managers
-
-echo "--------------------------------------------------"
-echo "Select Installation Option:"
-echo "1) Install Standard Suite (Browsers, Dev, Media, VPN, Docker)"
-echo "2) Install Security & Reversing Suite (Ghidra, Radare2, Nmap)"
-echo "3) Install EVERYTHING (Standard + Security)"
-echo "--------------------------------------------------"
-read -p "Enter choice [1-3]: " choice
-
-case $choice in
-    1)
-        install_standard_suite
-        ;;
-    2)
-        install_security_tools
-        ;;
-    3)
-        install_standard_suite
-        install_security_tools
-        ;;
-    *)
-        echo "Invalid selection. Exiting."
-        exit 1
-        ;;
-esac
-
-echo "[+] All selected installations completed successfully!"
+    echo
+    echo "Session totals: $OK_COUNT installed,"
+    echo "$FAIL_COUNT failed, $SKIP_COUNT skipped."
+done
