@@ -64,6 +64,9 @@ APP_CATALOG=(
     "GIMP|media|||org.gimp.GIMP"
     "OBS Studio|media|||com.obsproject.Studio"
     "Steam|gaming|||com.valvesoftware.Steam"
+    "Minicom|network|minicom|minicom|"
+    "Lutris|gaming|||net.lutris.Lutris"
+    "Tailscale VPN|vpn|tailscale|tailscale|"
 )
 
 OK_COUNT=0
