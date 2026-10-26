@@ -318,13 +318,7 @@ while true; do
 
     case "$choice" in
         1)
-            install_category essential
-            install_category development
-            install_category containers
-            install_category communication
-            install_category vpn
-            install_category media
-            install_category gaming
+            install_category standard
             start_docker_if_available
             ;;
         2)
