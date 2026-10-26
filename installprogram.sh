@@ -35,38 +35,68 @@ fi
 
 # One editable catalog:
 # Name|Category|APT package|DNF package|Flatpak ID
+
 APP_CATALOG=(
-    "curl|essential|curl|curl|"
-    "wget|essential|wget|wget|"
-    "Git|essential|git|git|"
-    "Git LFS|essential|git-lfs|git-lfs|"
-    "7-Zip|essential|p7zip-full|p7zip|"
-    "Python 3|development|python3|python3|"
-    "Python pip|development|python3-pip|python3-pip|"
-    "Python venv|development|python3-venv|python3|"
-    "VS Code|development|||com.visualstudio.code"
-    "Docker Engine|containers|docker.io|moby-engine|"
-    "Docker Compose|containers|docker-compose-v2|docker-compose|"
-    "Bitwarden|communication|||com.bitwarden.desktop"
-    "Discord|communication|||com.discordapp.Discord"
-    "Proton VPN|vpn|||com.protonvpn.www"
-    "OpenVPN|vpn|openvpn|openvpn|"
+    # --- Office & PDF ---
+    # Linux alternatives to Microsoft 365 and Adobe Acrobat Reader
+    "LibreOffice|standard|libreoffice|libreoffice|org.libreoffice.LibreOffice"
+    "PDF Reader (Okular)|standard|okular|okular|org.kde.okular"
+
+    # --- Development, Containers & System Administration ---
+    "Python 3|standard|python3|python3|"
+    "Python pip|standard|python3-pip|python3-pip|"
+    "Python venv|standard|python3-venv|python3|"
+    "Git|standard|git|git|"
+    "Visual Studio Code|standard|||com.visualstudio.code"
+    "Docker Engine|standard|docker.io|moby-engine|"
+    "Docker Compose|standard|docker-compose-v2|docker-compose|"
+    "Android Studio|standard|||com.google.AndroidStudio"
+    "7-Zip|standard|7zip|p7zip|"
+    "Tailscale VPN|standard|tailscale|tailscale|"
+    "OpenVPN|standard|openvpn|openvpn|"
+    "Minicom|standard|minicom|minicom|"
+    "GNS3|standard|gns3-gui|gns3-gui|"
+    "Sysinternals Alternatives (htop)|standard|htop|htop|"
+    "Remote Desktop (Remmina)|standard|remmina|remmina|org.remmina.Remmina"
+
+    # --- Browsers & Password Management ---
+    "Bitwarden|standard|||com.bitwarden.desktop"
+    "Google Chrome|standard|||com.google.Chrome"
+    "Mozilla Firefox|standard|firefox|firefox|org.mozilla.firefox"
+    "Chromium|standard|chromium|chromium|org.chromium.Chromium"
+
+    # --- Communication & Collaboration ---
+    "Discord|standard|||com.discordapp.Discord"
+    "Zoom|standard|||us.zoom.Zoom"
+    "Microsoft Teams Alternative (Web)|standard|||"
+    "Proton VPN|standard|||com.protonvpn.www"
+
+    # --- Security & Network Tools ---
+    "Nmap|security|nmap|nmap|"
+    "OWASP ZAP|security|||org.zaproxy.ZAP"
+    "Wireshark|security|wireshark|wireshark|"
+    "Hashcat|security|hashcat|hashcat|"
+    "Postman|security|||com.getpostman.Postman"
     "Ghidra|security|ghidra|ghidra|"
     "Radare2|security|radare2|radare2|"
-    "Nmap|security|nmap|nmap|"
-    "Wireshark|security|wireshark|wireshark|"
     "ClamAV|security|clamav|clamav|"
-    "Exploit Database|security|exploitdb|exploitdb|"
-    "Kdenlive|media|||org.kde.kdenlive"
-    "FreeCAD|media|||org.freecad.FreeCAD"
-    "KiCad|media|||org.kicad.KiCad"
-    "Blender|media|||org.blender.Blender"
-    "GIMP|media|||org.gimp.GIMP"
-    "OBS Studio|media|||com.obsproject.Studio"
-    "Steam|gaming|||com.valvesoftware.Steam"
-    "Minicom|network|minicom|minicom|"
-    "Lutris|gaming|||net.lutris.Lutris"
-    "Tailscale VPN|vpn|tailscale|tailscale|"
+    "Burp Suite Community|security|||"
+    "IDA Free|security|||"
+    "x64dbg Alternative (GDB)|security|gdb|gdb|"
+    "CyberChef Alternative (Web)|security|||"
+
+    # --- Media, Gaming & Content Creation ---
+    "VLC Media Player|standard|vlc|vlc|org.videolan.VLC"
+    "Audacity|standard|audacity|audacity|org.audacityteam.Audacity"
+    "OBS Studio|standard|obs-studio|obs-studio|com.obsproject.Studio"
+    "Kdenlive|standard|||org.kde.kdenlive"
+    "KiCad|standard|kicad|kicad|org.kicad.KiCad"
+    "FreeCAD|standard|freecad|freecad|org.freecad.FreeCAD"
+    "Blender|standard|blender|blender|org.blender.Blender"
+    "GIMP|standard|gimp|gimp|org.gimp.GIMP"
+    "Steam|standard|||com.valvesoftware.Steam"
+    "Lutris|standard|||net.lutris.Lutris"
+    "Heroic Games Launcher|standard|||com.heroicgameslauncher.hgl"
 )
 
 OK_COUNT=0
